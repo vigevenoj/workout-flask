@@ -3,7 +3,7 @@ from app import db
 
 class Run(db.Model):
     __tablename__ = 'runs'
-    id = db.Column(db.Integer, primary_key=True)
+    runid = db.Column(db.Integer, primary_key=True)
     rdate = db.Column(db.Date())
     timeofday = db.Column(db.String())
     distance = db.Column(db.String())  # TODO numeric/decimal
