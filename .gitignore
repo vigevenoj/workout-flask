@@ -1,3 +1,8 @@
+.*.swp
+# Python 
 venv
 .Python
-.*.swp
+__pycache__/
+*.py[cod]
+.ropeproject
+.pydevproject
