@@ -23,4 +23,4 @@ class Run(db.Model):
         self.comment = comment
 
     def __repr__(self):
-        return'<id {}>'.format(self.id)
+        return'<id {}>'.format(self.runid)

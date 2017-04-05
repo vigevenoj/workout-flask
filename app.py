@@ -35,8 +35,10 @@ def get_runs():
 
 @app.route('/running/api/v1/runs/<int:run_id>', methods=['GET'])
 def get_run(run_id):
-    # for now abort with a 501 not implemented
-    abort(404)
+    run = Run.query.get(run_id)
+    if not run:
+        abort(404)
+    return jsonify({'run': run})
 
 
 @app.route('/running/api/v1/runs', methods=['POST'])
