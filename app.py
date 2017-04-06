@@ -36,7 +36,7 @@ def get_run(run_id):
     this_run = Run.query.get(run_id)
     if not this_run:
         abort(404)
-    return this_run
+    return jsonify({'run': this_run})
 
 
 @app.route('/running/api/v1/runs', methods=['POST'])
