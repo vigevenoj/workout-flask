@@ -29,16 +29,14 @@ def index():
 @app.route('/running/api/v1/runs', methods=['GET'])
 def get_runs():
     return jsonify({'runs': Run.query.all()})
-    # for now, abort with a 501 not implemented
-    abort(501)
 
 
 @app.route('/running/api/v1/runs/<int:run_id>', methods=['GET'])
 def get_run(run_id):
-    run = Run.query.get(run_id)
-    if not run:
+    this_run = Run.query.get(run_id)
+    if not this_run:
         abort(404)
-    return jsonify({'run': run})
+    return this_run
 
 
 @app.route('/running/api/v1/runs', methods=['POST'])
@@ -53,12 +51,13 @@ def create_run():
     elapsed = request.json['elapsed']
 #    effort = request.json['effort']
     comment = request.json['comment']
-    run = Run(rdate=rdate, timeofday=timeofday, distance=distance, units=units,
-              elapsed=elapsed, effort="", comment=comment)
-    db.session.add(run)
+    this_run = Run(rdate=rdate, timeofday=timeofday, distance=distance,
+                   units=units, elapsed=elapsed, effort="", comment=comment)
+    db.session.add(this_run)
     db.session.commit()
-    return (jsonify({'run': run.rdate}), 201,
-            {'Location': url_for('get_run', run_id=run.runid, _external=True)})
+    return (jsonify({'run': this_run.rdate}), 201,
+            {'Location': url_for('get_run', run_id=this_run.runid,
+                                 _external=True)})
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,4 +1,22 @@
 from app import db
+# import json
+import simplejson as json
+from datetime import date
+from datetime import datetime
+from datetime import timedelta
+
+
+class RunJsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.strftime('%Y-%m-%dT%H:%M:%SZ')
+        elif isinstance(obj, date):
+            return obj.strftime('%Y-%m-%d')
+        # Let the base class default method raise the TypeError
+        elif isinstance(obj, timedelta):
+            return (datetime.min + obj).time().isoformat()
+            # return str(obj)
+        return json.JSONEncoder.default(self, obj)
 
 
 class Run(db.Model):
@@ -23,4 +41,11 @@ class Run(db.Model):
         self.comment = comment
 
     def __repr__(self):
-        return'<id {}>'.format(self.runid)
+        rundict = {'rdate': self.rdate,
+                   'timeofday': self.timeofday,
+                   'distance': self.distance,
+                   'units': self.units,
+                   'elapsed': self.elapsed,
+                   'effort': self.effort,
+                   'comment': self.comment}
+        return json.dumps(rundict, cls=RunJsonEncoder)
