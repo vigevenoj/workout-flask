@@ -27,7 +27,7 @@ def index():
     return "Hello world\n"
 
 
-@app.route('/running/api/v1/runs', methods=['GET'])
+@app.route('/api/v1/runs', methods=['GET'])
 def get_runs():
     runs = Run.query.all()
     run_schema = RunSchema()
@@ -35,7 +35,7 @@ def get_runs():
     return jsonify({'runs': result.data})
 
 
-@app.route('/running/api/v1/runs/<int:run_id>', methods=['GET'])
+@app.route('/api/v1/runs/<int:run_id>', methods=['GET'])
 def get_run(run_id):
     this_run = Run.query.get(run_id)
     if not this_run:
@@ -45,7 +45,7 @@ def get_run(run_id):
     return jsonify({'run': result.data})
 
 
-@app.route('/running/api/v1/runs', methods=['POST'])
+@app.route('/api/v1/runs', methods=['POST'])
 # @auth.login_required
 def create_run():
     if not request.json:
