@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 import os
 from models import *
 # import yaml
+# from pprint import pprint
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
@@ -28,7 +29,10 @@ def index():
 
 @app.route('/running/api/v1/runs', methods=['GET'])
 def get_runs():
-    return jsonify({'runs': Run.query.all()})
+    runs = Run.query.all()
+    run_schema = RunSchema()
+    result = run_schema.dump(runs)
+    return jsonify({'runs': result.data})
 
 
 @app.route('/running/api/v1/runs/<int:run_id>', methods=['GET'])
@@ -36,7 +40,9 @@ def get_run(run_id):
     this_run = Run.query.get(run_id)
     if not this_run:
         abort(404)
-    return jsonify({'run': this_run})
+    run_schema = RunSchema()
+    result = run_schema.dump(this_run)
+    return jsonify({'run': result.data})
 
 
 @app.route('/running/api/v1/runs', methods=['POST'])
