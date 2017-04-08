@@ -1,10 +1,10 @@
 #! /usr/bin/env python
 from flask import Flask, abort, jsonify, make_response, request, url_for
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import cast, DATE
 import os
 from models import *
-# import yaml
-# from pprint import pprint
+import datetime
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
@@ -30,8 +30,7 @@ def index():
 @app.route('/api/v1/runs', methods=['GET'])
 def get_runs():
     runs = Run.query.all()
-    run_schema = RunSchema()
-    result = run_schema.dump(runs)
+    result = RunSchema().dump(runs, many=True)
     return jsonify({'runs': result.data})
 
 
@@ -40,8 +39,7 @@ def get_run(run_id):
     this_run = Run.query.get(run_id)
     if not this_run:
         abort(404)
-    run_schema = RunSchema()
-    result = run_schema.dump(this_run)
+    result = RunSchema().dump(this_run)
     return jsonify({'run': result.data})
 
 
@@ -53,7 +51,6 @@ def create_run():
     # Validate the input and deserialize it from the json body
     data, errors = RunSchema().load(json_data, partial=True)
     if errors:
-        print(errors)
         return jsonify(errors), 400
     if 'effort' in data:
         effort = data['effort']
@@ -82,9 +79,11 @@ def create_run():
 def last_x_days(days):
     if days is None or days <= 0:
         return bad_request
-#    runs = Run.query.all()
-#    run_schema = RunSchema()
-    return jsonify({'runs': 'past seven days'})
+    today = datetime.date.today()
+    x_day = today + datetime.timedelta(0-days)
+    runs = Run.query.filter(cast(Run.rdate, DATE) >= x_day).all()
+    result = RunSchema().dump(runs, many=True)
+    return jsonify({'runs': result.data})
 
 if __name__ == '__main__':
     app.run(debug=True)
