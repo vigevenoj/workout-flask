@@ -46,24 +46,45 @@ def get_run(run_id):
 
 
 @app.route('/api/v1/runs', methods=['POST'])
-# @auth.login_required
 def create_run():
-    if not request.json:
+    json_data = request.get_json()
+    if not json_data:
         abort(400)
-    rdate = request.json['rdate']
-    timeofday = request.json['timeofday']
-    distance = request.json['distance']
-    units = request.json['units']
-    elapsed = request.json['elapsed']
-#    effort = request.json['effort']
-    comment = request.json['comment']
-    this_run = Run(rdate=rdate, timeofday=timeofday, distance=distance,
-                   units=units, elapsed=elapsed, effort="", comment=comment)
-    db.session.add(this_run)
+    # Validate the input and deserialize it from the json body
+    data, errors = RunSchema().load(json_data, partial=True)
+    if errors:
+        print(errors)
+        return jsonify(errors), 400
+    if 'effort' in data:
+        effort = data['effort']
+    else:
+        effort = ""
+    if 'comment' in data:
+        comment = data['comment']
+    else:
+        comment = ""
+    run = Run(
+        rdate=data['rdate'],
+        timeofday=data['timeofday'],
+        distance=data['distance'],
+        elapsed=data['elapsed'],
+        effort=effort,
+        comment=comment,
+    )
+    db.session.add(run)
     db.session.commit()
-    return (jsonify({'run': this_run.rdate}), 201,
-            {'Location': url_for('get_run', run_id=this_run.runid,
+    return (jsonify({'run': RunSchema().dump(run)}), 201,
+            {'Location': url_for('get_run', run_id=run.runid,
                                  _external=True)})
+
+
+@app.route('/api/v1/stats/last/<int:days>')
+def last_x_days(days):
+    if days is None or days <= 0:
+        return bad_request
+#    runs = Run.query.all()
+#    run_schema = RunSchema()
+    return jsonify({'runs': 'past seven days'})
 
 if __name__ == '__main__':
     app.run(debug=True)
