@@ -29,3 +29,8 @@ class RunSchema(Schema):
     def validate_timeofday(self, value):
         if value not in ['am', 'pm', 'noon']:
             raise ValidationError('Time of day not in range')
+
+    @validates('units')
+    def validate_units(self, value):
+        if value not in ['m', 'km', 'miles']:
+            raise ValidationError('Units must be one of m, km, or miles')
