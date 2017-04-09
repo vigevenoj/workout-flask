@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 from flask import Flask, abort, jsonify, make_response, request, url_for
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import cast, DATE
+from sqlalchemy import cast, DATE, text
 import os
 from models import *
 import datetime
@@ -75,15 +75,68 @@ def create_run():
                                  _external=True)})
 
 
+@app.route('/api/v1/runs/latest')
+def get_latest_run():
+    # "SELECT r.rdate, r.timeofday, r.distance, r.units, r.elapsed FROM runs r
+    # where r.rdate = (SELECT MAX(r2.rdate) FROM runs r2)"
+    abort(404)
+
+
 @app.route('/api/v1/stats/last/<int:days>')
 def last_x_days(days):
     if days is None or days <= 0:
         return bad_request
     today = datetime.date.today()
-    x_day = today + datetime.timedelta(0-days)
+    x_day = today + datetime.timedelta(0 - days)
     runs = Run.query.filter(cast(Run.rdate, DATE) >= x_day).all()
+    # TODO return total miles and duration for the time period
     result = RunSchema().dump(runs, many=True)
     return jsonify({'runs': result.data})
+
+
+@app.route('/api/v1/stats/ytd')
+def ytd():
+    jan1 = datetime.date(year=datetime.date.today().year, month=1, day=1)
+    sql = text('select sum(r.distance*uc.factor) as distance from runs r, '
+               'unit_conversion uc where uc.from_u = r.units and uc.to_u = '
+               ' :units and r.distance is not null and r.rdate >= :date')
+    results = db.engine.execute(sql, {'units': 'miles', 'date': jan1})
+    result = results.first()[0]
+    resp = {'distance': result,
+            'units': 'miles'}
+    return jsonify({'ytd': resp})
+    # TODO fill this out, and return total miles and duration for this year
+    # "SELECT SUM(r.distance*uc.factor) as distance
+    # FROM runs r, unit_conversion uc
+    # WHERE uc.from_u = r.units and uc.to_u = :units
+    #   AND r.distance is not null
+    #   and r.rdate >= :date"
+
+
+@app.route('/api/v1/stats/yearly/')
+def yearly_stats(year):
+    abort(400)
+    # "SELECT count(distance_interval) as count, distance_interval " .
+    # "FROM ( " .
+    # "SELECT r.distance, r.units, " .
+    # "CASE " .
+    # "WHEN (r.distance*uc.factor) <= 1 THEN '1 mile or less' " .
+    # "WHEN (r.distance*uc.factor) > 1 AND (r.distance*uc.factor) <= 3 THEN '1 - 3 miles' " .
+    # "WHEN (r.distance*uc.factor) > 3 AND (r.distance*uc.factor) <= 5 THEN '3 - 5 miles' " .
+    # "WHEN (r.distance*uc.factor) > 5 AND (r.distance*uc.factor) <= 10 THEN '5 - 10 miles' " .
+    # "WHEN (r.distance*uc.factor) > 10 AND (r.distance*uc.factor) <= 15 THEN '10 - 15 miles' " .
+    # "WHEN (r.distance*uc.factor) > 15 AND (r.distance*uc.factor) <= 20 THEN '15 - 20 miles' " .
+    # "WHEN (r.distance*uc.factor) > 20 AND (r.distance*uc.factor) <= 25 THEN '20 - 25 miles' " .
+    # "WHEN (r.distance*uc.factor) > 25 THEN 'over 25 miles' ".
+    # "ELSE 'Other' " .
+    # "END AS distance_interval " .
+    # "FROM runs r, unit_conversion uc " .
+    # "WHERE uc.from_u = r.units and uc.to_u = 'miles' " .
+    # "AND r.distance IS NOT NULL and r.elapsed IS NOT NULL " .
+    # "AND EXTRACT(YEAR from r.rdate) = ? " .
+    # ") AS t " .
+    # "GROUP BY distance_interval"
+
 
 if __name__ == '__main__':
     app.run(debug=True)
