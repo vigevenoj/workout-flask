@@ -105,37 +105,36 @@ def ytd():
     resp = {'distance': result,
             'units': 'miles'}
     return jsonify({'ytd': resp})
-    # TODO fill this out, and return total miles and duration for this year
-    # "SELECT SUM(r.distance*uc.factor) as distance
-    # FROM runs r, unit_conversion uc
-    # WHERE uc.from_u = r.units and uc.to_u = :units
-    #   AND r.distance is not null
-    #   and r.rdate >= :date"
 
 
-@app.route('/api/v1/stats/yearly/')
+@app.route('/api/v1/stats/yearly/<int:year>')
 def yearly_stats(year):
-    abort(400)
-    # "SELECT count(distance_interval) as count, distance_interval " .
-    # "FROM ( " .
-    # "SELECT r.distance, r.units, " .
-    # "CASE " .
-    # "WHEN (r.distance*uc.factor) <= 1 THEN '1 mile or less' " .
-    # "WHEN (r.distance*uc.factor) > 1 AND (r.distance*uc.factor) <= 3 THEN '1 - 3 miles' " .
-    # "WHEN (r.distance*uc.factor) > 3 AND (r.distance*uc.factor) <= 5 THEN '3 - 5 miles' " .
-    # "WHEN (r.distance*uc.factor) > 5 AND (r.distance*uc.factor) <= 10 THEN '5 - 10 miles' " .
-    # "WHEN (r.distance*uc.factor) > 10 AND (r.distance*uc.factor) <= 15 THEN '10 - 15 miles' " .
-    # "WHEN (r.distance*uc.factor) > 15 AND (r.distance*uc.factor) <= 20 THEN '15 - 20 miles' " .
-    # "WHEN (r.distance*uc.factor) > 20 AND (r.distance*uc.factor) <= 25 THEN '20 - 25 miles' " .
-    # "WHEN (r.distance*uc.factor) > 25 THEN 'over 25 miles' ".
-    # "ELSE 'Other' " .
-    # "END AS distance_interval " .
-    # "FROM runs r, unit_conversion uc " .
-    # "WHERE uc.from_u = r.units and uc.to_u = 'miles' " .
-    # "AND r.distance IS NOT NULL and r.elapsed IS NOT NULL " .
-    # "AND EXTRACT(YEAR from r.rdate) = ? " .
-    # ") AS t " .
-    # "GROUP BY distance_interval"
+    if year < 1900:
+        abort(400)
+    sql = text("SELECT count(distance_interval) as count, distance_interval "
+               "FROM ( "
+               "SELECT r.distance, r.units, "
+               "CASE "
+               "WHEN (r.distance*uc.factor) <= 1 THEN '1 mile or less' "
+               "WHEN (r.distance*uc.factor) > 1 AND (r.distance*uc.factor) <= 3 THEN '1 - 3 miles' "
+               "WHEN (r.distance*uc.factor) > 3 AND (r.distance*uc.factor) <= 5 THEN '3 - 5 miles' "
+               "WHEN (r.distance*uc.factor) > 5 AND (r.distance*uc.factor) <= 10 THEN '5 - 10 miles' "
+               "WHEN (r.distance*uc.factor) > 10 AND (r.distance*uc.factor) <= 15 THEN '10 - 15 miles' "
+               "WHEN (r.distance*uc.factor) > 15 AND (r.distance*uc.factor) <= 20 THEN '15 - 20 miles' "
+               "WHEN (r.distance*uc.factor) > 20 AND (r.distance*uc.factor) <= 25 THEN '20 - 25 miles' "
+               "WHEN (r.distance*uc.factor) > 25 THEN 'over 25 miles' "
+               "ELSE 'Other' "
+               "END AS distance_interval "
+               "FROM runs r, unit_conversion uc "
+               "WHERE uc.from_u = r.units and uc.to_u = 'miles' "
+               "AND r.distance IS NOT NULL and r.elapsed IS NOT NULL "
+               "AND EXTRACT(YEAR from r.rdate) = :year "
+               ") AS t "
+               "GROUP BY distance_interval")
+    results = db.engine.execute(sql, {'year': year})
+    all_rows = results.fetchall()
+    ranges = dict((interval, count) for count, interval in all_rows)
+    return jsonify({'distance ranges' : ranges})
 
 
 if __name__ == '__main__':
