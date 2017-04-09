@@ -111,6 +111,8 @@ def ytd():
 def yearly_stats(year):
     if year < 1900:
         abort(400)
+    if year > datetime.date.today().year:
+        abort(400)
     sql = text("SELECT count(distance_interval) as count, distance_interval "
                "FROM ( "
                "SELECT r.distance, r.units, "
