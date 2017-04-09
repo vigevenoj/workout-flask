@@ -2,6 +2,7 @@
 from flask import Flask, abort, jsonify, make_response, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import cast, DATE, text
+from sqlalchemy.exc import SQLAlchemyError
 import os
 from models import *
 import datetime
@@ -43,6 +44,54 @@ def get_run(run_id):
     return jsonify({'run': result.data})
 
 
+@app.route('/api/v1/runs/<int:run_id>', methods=['DELETE'])
+def delete_run(run_id):
+    run = db.session.query(Run).filter_by(runid=run_id).first()
+    if run is None:
+        return not_found(run_id)
+    try:
+        db.session.delete(run)
+        db.session.commit()
+        response = make_response()
+        response.status_code = 204
+        return response
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        resp = jsonify({"error": str(e)})
+        resp.status_code = 500
+        return resp
+
+
+@app.route('/api/v1/runs/<int:run_id>', methods=['PUT'])
+def update_run(run_id):
+    run = db.session.query(Run).filter_by(runid=run_id).first()
+    if run is None:
+        return not_found(run_id)
+    json_data = reqest.get_json()
+    if not json_data:
+        abort(400)
+    data, errors = RunSchema().load(json_data, partial=True)
+    if errors:
+        return jsonify(errors), 400
+    if 'effort' in data:
+        run.effort = data['effort']
+    if 'comment' in data:
+        run.comment = data['comment']
+    if 'rdate' in data:
+        run.rdate = data['rdate']
+    if 'timeofday' in data:
+        run.timeofday = data['timeofday']
+    if 'distance' in data:
+        run.distance = data['distance']
+    if 'elapsed' in data:
+        run.elapsed = data['elapsed']
+    db.session.add(run)
+    db.session.commit()
+    return (jsonify({'run': RunSchema().dump(run)}), 201,
+            {'Location': url_for('get_run', run_id=runid,
+                                 _external=True)})
+
+
 @app.route('/api/v1/runs', methods=['POST'])
 def create_run():
     json_data = request.get_json()
@@ -82,7 +131,7 @@ def get_latest_run():
     abort(404)
 
 
-@app.route('/api/v1/stats/last/<int:days>')
+@app.route('/api/v1/runs/last/<int:days>')
 def last_x_days(days):
     if days is None or days <= 0:
         return bad_request
@@ -136,7 +185,7 @@ def yearly_stats(year):
     results = db.engine.execute(sql, {'year': year})
     all_rows = results.fetchall()
     ranges = dict((interval, count) for count, interval in all_rows)
-    return jsonify({'distance ranges' : ranges})
+    return jsonify({'distance ranges': ranges})
 
 
 if __name__ == '__main__':
