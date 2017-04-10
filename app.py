@@ -30,6 +30,9 @@ def index():
 
 @app.route('/api/v1/runs', methods=['GET'])
 def get_runs():
+    """
+    Return a list of runs
+    """
     runs = Run.query.all()
     result = RunSchema().dump(runs, many=True)
     return jsonify({'runs': result.data})
@@ -37,6 +40,9 @@ def get_runs():
 
 @app.route('/api/v1/runs/<int:run_id>', methods=['GET'])
 def get_run(run_id):
+    """
+    Return the specified run
+    """
     this_run = Run.query.get(run_id)
     if not this_run:
         abort(404)
@@ -46,6 +52,9 @@ def get_run(run_id):
 
 @app.route('/api/v1/runs/<int:run_id>', methods=['DELETE'])
 def delete_run(run_id):
+    """
+    Delete the specified run
+    """
     run = db.session.query(Run).filter_by(runid=run_id).first()
     if run is None:
         return not_found(run_id)
@@ -64,6 +73,9 @@ def delete_run(run_id):
 
 @app.route('/api/v1/runs/<int:run_id>', methods=['PUT'])
 def update_run(run_id):
+    """
+    Update the specified run
+    """
     run = db.session.query(Run).filter_by(runid=run_id).first()
     if run is None:
         return not_found(run_id)
@@ -94,6 +106,9 @@ def update_run(run_id):
 
 @app.route('/api/v1/runs', methods=['POST'])
 def create_run():
+    """
+    Create a new run
+    """
     json_data = request.get_json()
     if not json_data:
         abort(400)
@@ -126,6 +141,9 @@ def create_run():
 
 @app.route('/api/v1/runs/latest')
 def get_latest_run():
+    """
+    Get the most recent run
+    """
     run = db.session.query(Run).from_statement(
         text("SELECT * FROM runs r "
              "where r.rdate = (SELECT MAX(r2.rdate) FROM runs r2)")).first()
@@ -136,6 +154,9 @@ def get_latest_run():
 
 @app.route('/api/v1/runs/last/<int:days>')
 def last_x_days(days):
+    """
+    Get all the runs in the past <int:days> days
+    """
     if days is None or days <= 0:
         return bad_request
     today = datetime.date.today()
@@ -148,6 +169,9 @@ def last_x_days(days):
 
 @app.route('/api/v1/stats/ytd')
 def ytd():
+    """
+    Get statistics about runs since the first day of the current year
+    """
     jan1 = datetime.date(year=datetime.date.today().year, month=1, day=1)
     sql = text('select sum(r.distance*uc.factor) as distance from runs r, '
                'unit_conversion uc where uc.from_u = r.units and uc.to_u = '
@@ -161,6 +185,11 @@ def ytd():
 
 @app.route('/api/v1/stats/yearly/<int:year>')
 def yearly_stats(year):
+    """
+    Get statistics about runs in a given year
+    This is provided as a list of distance ranges and the number of runs in
+    each range.
+    """
     if year < 1900:
         abort(400)
     if year > datetime.date.today().year:
