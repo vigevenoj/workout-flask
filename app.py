@@ -126,9 +126,12 @@ def create_run():
 
 @app.route('/api/v1/runs/latest')
 def get_latest_run():
-    # "SELECT r.rdate, r.timeofday, r.distance, r.units, r.elapsed FROM runs r
-    # where r.rdate = (SELECT MAX(r2.rdate) FROM runs r2)"
-    abort(404)
+    run = db.session.query(Run).from_statement(
+        text("SELECT * FROM runs r "
+             "where r.rdate = (SELECT MAX(r2.rdate) FROM runs r2)")).first()
+    if run is None:
+        abort(404)
+    return jsonify({'run': RunSchema().dump(run)})
 
 
 @app.route('/api/v1/runs/last/<int:days>')
