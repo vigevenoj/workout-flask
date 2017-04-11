@@ -28,7 +28,7 @@ def index():
     return "Hello world\n"
 
 
-@app.route('/api/v1/runs', methods=['GET'])
+@app.route('/runs', methods=['GET'])
 def get_runs():
     """
     Return a list of runs
@@ -38,7 +38,7 @@ def get_runs():
     return jsonify({'runs': result.data})
 
 
-@app.route('/api/v1/runs/<int:run_id>', methods=['GET'])
+@app.route('/runs/<int:run_id>', methods=['GET'])
 def get_run(run_id):
     """
     Return the specified run
@@ -50,7 +50,7 @@ def get_run(run_id):
     return jsonify({'run': result.data})
 
 
-@app.route('/api/v1/runs/<int:run_id>', methods=['DELETE'])
+@app.route('/runs/<int:run_id>', methods=['DELETE'])
 def delete_run(run_id):
     """
     Delete the specified run
@@ -71,7 +71,7 @@ def delete_run(run_id):
         return resp
 
 
-@app.route('/api/v1/runs/<int:run_id>', methods=['PUT'])
+@app.route('/runs/<int:run_id>', methods=['PUT'])
 def update_run(run_id):
     """
     Update the specified run
@@ -104,7 +104,7 @@ def update_run(run_id):
                                  _external=True)})
 
 
-@app.route('/api/v1/runs', methods=['POST'])
+@app.route('/runs', methods=['POST'])
 def create_run():
     """
     Create a new run
@@ -139,7 +139,7 @@ def create_run():
                                  _external=True)})
 
 
-@app.route('/api/v1/runs/latest')
+@app.route('/runs/latest')
 def get_latest_run():
     """
     Get the most recent run
@@ -152,7 +152,7 @@ def get_latest_run():
     return jsonify({'run': RunSchema().dump(run)})
 
 
-@app.route('/api/v1/runs/last/<int:days>')
+@app.route('/runs/last/<int:days>')
 def last_x_days(days):
     """
     Get all the runs in the past <int:days> days
@@ -167,7 +167,7 @@ def last_x_days(days):
     return jsonify({'runs': result.data})
 
 
-@app.route('/api/v1/stats/ytd')
+@app.route('/stats/ytd')
 def ytd():
     """
     Get statistics about runs since the first day of the current year
@@ -183,7 +183,7 @@ def ytd():
     return jsonify({'ytd': resp})
 
 
-@app.route('/api/v1/stats/yearly/<int:year>')
+@app.route('/stats/yearly/ranges/<int:year>')
 def yearly_stats(year):
     """
     Get statistics about runs in a given year
