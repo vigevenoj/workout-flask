@@ -4,7 +4,7 @@ from marshmallow import Schema, fields, validates, ValidationError
 
 class Run(db.Model):
     __tablename__ = 'runs'
-    runid = db.Column(db.Integer, db.Sequence('runs_runid_seq'),
+    runid = db.Column('runid', db.Integer, db.Sequence('runs_runid_seq'),
                       primary_key=True)
     rdate = db.Column(db.Date())
     timeofday = db.Column(db.String())
@@ -21,7 +21,7 @@ class RunSchema(Schema):
     timeofday = fields.Str()
     distance = fields.Decimal(as_string=True)
     units = fields.Str()
-    elapsed = fields.TimeDelta()
+    elapsed = fields.String()
     effort = fields.Str()
     comment = fields.Str()
 
