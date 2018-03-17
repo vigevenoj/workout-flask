@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import cast, DATE, text
 from sqlalchemy.exc import SQLAlchemyError
 import os
-from models import *
+from models import *  # Run, RunSchema
 import datetime
 
 app = Flask(__name__)
@@ -30,9 +30,7 @@ def index():
 
 @app.route('/runs', methods=['GET'])
 def get_runs():
-    """
-    Return a list of runs
-    """
+    """Return a list of runs"""
     runs = Run.query.all()
     result = RunSchema().dump(runs, many=True)
     return jsonify({'runs': result.data})
@@ -40,9 +38,7 @@ def get_runs():
 
 @app.route('/runs/<int:run_id>', methods=['GET'])
 def get_run(run_id):
-    """
-    Return the specified run
-    """
+    """Return the specified run"""
     this_run = Run.query.get(run_id)
     if not this_run:
         abort(404)
@@ -52,9 +48,7 @@ def get_run(run_id):
 
 @app.route('/runs/<int:run_id>', methods=['DELETE'])
 def delete_run(run_id):
-    """
-    Delete the specified run
-    """
+    """Delete the specified run"""
     run = db.session.query(Run).filter_by(runid=run_id).first()
     if run is None:
         return not_found(run_id)
@@ -72,14 +66,12 @@ def delete_run(run_id):
 
 
 @app.route('/runs/<int:run_id>', methods=['PUT'])
-def update_run(run_id):
-    """
-    Update the specified run
-    """
-    run = db.session.query(Run).filter_by(runid=run_id).first()
+def update_run(runid):
+    """Update the specified run"""
+    run = db.session.query(Run).filter_by(runid=runid).first()
     if run is None:
-        return not_found(run_id)
-    json_data = reqest.get_json()
+        return not_found(runid)
+    json_data = request.get_json()
     if not json_data:
         abort(400)
     data, errors = RunSchema().load(json_data, partial=True)
@@ -95,6 +87,8 @@ def update_run(run_id):
         run.timeofday = data['timeofday']
     if 'distance' in data:
         run.distance = data['distance']
+    if 'units' in data:
+        run.units = data['units']
     if 'elapsed' in data:
         run.elapsed = data['elapsed']
     db.session.add(run)
@@ -106,15 +100,14 @@ def update_run(run_id):
 
 @app.route('/runs', methods=['POST'])
 def create_run():
-    """
-    Create a new run
-    """
+    """Create a new run"""
     json_data = request.get_json()
     if not json_data:
         abort(400)
     # Validate the input and deserialize it from the json body
     data, errors = RunSchema().load(json_data, partial=True)
     if errors:
+        print(json_data['elapsed'])
         return jsonify(errors), 400
     if 'effort' in data:
         effort = data['effort']
@@ -128,6 +121,7 @@ def create_run():
         rdate=data['rdate'],
         timeofday=data['timeofday'],
         distance=data['distance'],
+        units=data['units'],
         elapsed=data['elapsed'],
         effort=effort,
         comment=comment,
@@ -141,22 +135,18 @@ def create_run():
 
 @app.route('/runs/latest')
 def get_latest_run():
-    """
-    Get the most recent run
-    """
+    """Get the most recent run"""
     run = db.session.query(Run).from_statement(
         text("SELECT * FROM runs r "
              "where r.rdate = (SELECT MAX(r2.rdate) FROM runs r2)")).first()
-    if run is None:
+    if run is None:  # This is expected when there are no runs
         abort(404)
     return jsonify({'run': RunSchema().dump(run)})
 
 
 @app.route('/runs/last/<int:days>')
 def last_x_days(days):
-    """
-    Get all the runs in the past <int:days> days
-    """
+    """Get all the runs in the past <int:days> days"""
     if days is None or days <= 0:
         return bad_request
     today = datetime.date.today()
@@ -169,9 +159,7 @@ def last_x_days(days):
 
 @app.route('/stats/ytd')
 def ytd():
-    """
-    Get statistics about runs since the first day of the current year
-    """
+    """Get statistics about runs since the first day of the current year"""
     jan1 = datetime.date(year=datetime.date.today().year, month=1, day=1)
     sql = text('select sum(r.distance*uc.factor) as distance from runs r, '
                'unit_conversion uc where uc.from_u = r.units and uc.to_u = '
@@ -185,11 +173,9 @@ def ytd():
 
 @app.route('/stats/yearly/ranges/<int:year>')
 def yearly_stats(year):
-    """
-    Get statistics about runs in a given year
+    """Get statistics about runs in a given year
     This is provided as a list of distance ranges and the number of runs in
-    each range.
-    """
+    each range."""
     if year < 1900:
         abort(400)
     if year > datetime.date.today().year:
@@ -219,6 +205,15 @@ def yearly_stats(year):
     ranges = dict((interval, count) for count, interval in all_rows)
     return jsonify({'distance ranges': ranges})
 
+
+@app.route('/help', methods=['GET'])
+def help():
+    """Print available endpoints"""
+    func_list = {}
+    for rule in app.url_map.iter_rules():
+        if rule.endpoint != 'static':
+            func_list[rule.rule] = app.view_functions[rule.endpoint].__doc__
+    return jsonify(func_list)
 
 if __name__ == '__main__':
     app.run(debug=True)
