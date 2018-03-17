@@ -4,13 +4,17 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import cast, DATE, text
 from sqlalchemy.exc import SQLAlchemyError
 import os
-from models import *  # Run, RunSchema
 import datetime
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+from models import *  # Run, RunSchema
+#import models
+#from models import Run
+#from models import RunSchema
 
 
 @app.errorhandler(400)
@@ -21,11 +25,6 @@ def bad_request(error):
 @app.errorhandler(404)
 def not_found(error):
     return make_response(jsonify({'error': 'Not found'}), 404)
-
-
-@app.route('/')
-def index():
-    return "Hello world\n"
 
 
 @app.route('/runs', methods=['GET'])
@@ -39,17 +38,17 @@ def get_runs():
 @app.route('/runs/<int:run_id>', methods=['GET'])
 def get_run(run_id):
     """Return the specified run"""
-    this_run = Run.query.get(run_id)
+    this_run = models.Run.query.get(run_id)
     if not this_run:
         abort(404)
-    result = RunSchema().dump(this_run)
+    result = models.RunSchema().dump(this_run)
     return jsonify({'run': result.data})
 
 
 @app.route('/runs/<int:run_id>', methods=['DELETE'])
 def delete_run(run_id):
     """Delete the specified run"""
-    run = db.session.query(Run).filter_by(runid=run_id).first()
+    run = db.session.query(models.Run).filter_by(runid=run_id).first()
     if run is None:
         return not_found(run_id)
     try:
@@ -68,13 +67,13 @@ def delete_run(run_id):
 @app.route('/runs/<int:run_id>', methods=['PUT'])
 def update_run(runid):
     """Update the specified run"""
-    run = db.session.query(Run).filter_by(runid=runid).first()
+    run = db.session.query(models.Run).filter_by(runid=runid).first()
     if run is None:
         return not_found(runid)
     json_data = request.get_json()
     if not json_data:
         abort(400)
-    data, errors = RunSchema().load(json_data, partial=True)
+    data, errors = models.RunSchema().load(json_data, partial=True)
     if errors:
         return jsonify(errors), 400
     if 'effort' in data:
@@ -93,7 +92,7 @@ def update_run(runid):
         run.elapsed = data['elapsed']
     db.session.add(run)
     db.session.commit()
-    return (jsonify({'run': RunSchema().dump(run)}), 201,
+    return (jsonify({'run': models.RunSchema().dump(run)}), 201,
             {'Location': url_for('get_run', run_id=runid,
                                  _external=True)})
 
@@ -105,7 +104,7 @@ def create_run():
     if not json_data:
         abort(400)
     # Validate the input and deserialize it from the json body
-    data, errors = RunSchema().load(json_data, partial=True)
+    data, errors = models.RunSchema().load(json_data, partial=True)
     if errors:
         print(json_data['elapsed'])
         return jsonify(errors), 400
@@ -117,7 +116,7 @@ def create_run():
         comment = data['comment']
     else:
         comment = ""
-    run = Run(
+    run = models.Run(
         rdate=data['rdate'],
         timeofday=data['timeofday'],
         distance=data['distance'],
@@ -128,7 +127,7 @@ def create_run():
     )
     db.session.add(run)
     db.session.commit()
-    return (jsonify({'run': RunSchema().dump(run)}), 201,
+    return (jsonify({'run': models.RunSchema().dump(run)}), 201,
             {'Location': url_for('get_run', run_id=run.runid,
                                  _external=True)})
 
@@ -136,12 +135,12 @@ def create_run():
 @app.route('/runs/latest')
 def get_latest_run():
     """Get the most recent run"""
-    run = db.session.query(Run).from_statement(
+    run = db.session.query(models.Run).from_statement(
         text("SELECT * FROM runs r "
              "where r.rdate = (SELECT MAX(r2.rdate) FROM runs r2)")).first()
     if run is None:  # This is expected when there are no runs
         abort(404)
-    return jsonify({'run': RunSchema().dump(run)})
+    return jsonify({'run': models.RunSchema().dump(run)})
 
 
 @app.route('/runs/last/<int:days>')
@@ -151,9 +150,9 @@ def last_x_days(days):
         return bad_request
     today = datetime.date.today()
     x_day = today + datetime.timedelta(0 - days)
-    runs = Run.query.filter(cast(Run.rdate, DATE) >= x_day).all()
+    runs = models.Run.query.filter(cast(models.Run.rdate, DATE) >= x_day).all()
     # TODO return total miles and duration for the time period
-    result = RunSchema().dump(runs, many=True)
+    result = models.RunSchema().dump(runs, many=True)
     return jsonify({'runs': result.data})
 
 
