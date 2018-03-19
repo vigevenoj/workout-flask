@@ -1,4 +1,4 @@
-from app import db
+from api import db
 from marshmallow import Schema, fields, validates, ValidationError
 
 
@@ -13,6 +13,9 @@ class Run(db.Model):
     elapsed = db.Column(db.Interval())
     effort = db.Column(db.String(), nullable=True)
     comment = db.Column(db.String(), nullable=True)
+
+    def get(self):
+        return {'class': 'run'}
 
 
 class RunSchema(Schema):
